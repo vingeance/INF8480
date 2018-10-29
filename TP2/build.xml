@@ -15,6 +15,7 @@
 	<target name="clean">
 		<delete dir="bin" />
 		<delete file="operationserver.jar" />
+		<delete file="authenticationservice.jar" />
 		<delete file="loadbalancer.jar" />
 		<delete file="shared.jar" />
 	</target>
@@ -26,6 +27,7 @@
 	</target>
 	<target depends="build-class" name="build-jar">
 		<jar destfile="operationserver.jar" basedir="bin" includes="operationserver/**" update="false" />
+		<jar destfile="authenticationservice.jar" basedir="bin" includes="service/**" update="false" />
 		<jar destfile="loadbalancer.jar" basedir="bin" includes="loadbalancer/**" update="false" />
 		<jar destfile="shared.jar" basedir="bin" includes="shared/**" update="false" />
 	</target>

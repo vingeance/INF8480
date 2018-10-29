@@ -1,6 +1,9 @@
 package loadbalancer;
 
+import shared.AuthenticationServiceInterface;
 import shared.OperationServerInterface;
+import shared.OperationServerSharedInfo;
+import shared.TaskRejectedException;
 
 import java.io.*;
 import java.rmi.NotBoundException;
@@ -11,7 +14,8 @@ import java.util.ArrayList;
 
 public class LoadBalancer {
 
-    private OperationServerInterface operationServerStub = null;
+    private AuthenticationServiceInterface authenticationServiceStub = null;
+    private ArrayList<OperationServerInterface> operationServerStubs;
     private static final String OPERATIONS_DIRECTORY = "operations";
 
     public static void main(String[] args)
@@ -34,16 +38,18 @@ public class LoadBalancer {
             System.setSecurityManager(new SecurityManager());
         }
 
-        operationServerStub = loadOperationServerStub("127.0.0.1");
+        authenticationServiceStub = loadAuthenticationServiceStub("127.0.0.1");
+        operationServerStubs = loadOperationServerStubs();
     }
 
-    private OperationServerInterface loadOperationServerStub(String hostname) {
-        OperationServerInterface stub = null;
+    private AuthenticationServiceInterface loadAuthenticationServiceStub(String hostname)
+    {
+        AuthenticationServiceInterface stub = null;
 
         try
         {
             Registry registry = LocateRegistry.getRegistry(hostname);
-            stub = (OperationServerInterface) registry.lookup("operationserver");
+            stub = (AuthenticationServiceInterface) registry.lookup("authenticationservice");
         }
         catch (NotBoundException e)
         {
@@ -58,15 +64,40 @@ public class LoadBalancer {
         return stub;
     }
 
+    private ArrayList<OperationServerInterface> loadOperationServerStubs() {
+
+        ArrayList<OperationServerInterface> stubList = new ArrayList<>();
+        try
+        {
+            for(OperationServerSharedInfo serverInfo : authenticationServiceStub.getAvailableServersInfo())
+            {
+                Registry registry = LocateRegistry.getRegistry(serverInfo.getIpAddress());
+                OperationServerInterface stub = (OperationServerInterface) registry.lookup(serverInfo.getIpAddress());
+                stubList.add(stub);
+            }
+        }
+        catch (NotBoundException e)
+        {
+            System.err.println("Error: The name '" + e.getMessage()
+                    + "' is not defined in the registry.");
+        }
+        catch (RemoteException e)
+        {
+            System.err.println("Error: " + e.getMessage());
+        }
+
+        return stubList;
+    }
+
     private void run(String operationsFilename)
     {
         ArrayList<String> operationsList = readOperationsFile(operationsFilename);
         try
         {
-            int result = operationServerStub.calculateResult(operationsList);
+            int result = operationServerStubs.get(0).calculateResult(operationsList);
             System.out.println("The result is : " + result + ".");
         }
-        catch (RemoteException e)
+        catch (RemoteException | TaskRejectedException e)
         {
             System.err.println("Error: " + e.getMessage());
         }
