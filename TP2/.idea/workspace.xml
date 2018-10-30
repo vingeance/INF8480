@@ -2,17 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8f1d7b19-a84f-4b2f-8077-012646f8fb77" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/bin/loadbalancer/LoadBalancer.class" beforeDir="false" afterPath="$PROJECT_DIR$/bin/loadbalancer/LoadBalancer.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/operationserver/OperationServer.class" beforeDir="false" afterPath="$PROJECT_DIR$/bin/operationserver/OperationServer.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/shared/OperationServerInterface.class" beforeDir="false" afterPath="$PROJECT_DIR$/bin/shared/OperationServerInterface.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.xml" beforeDir="false" afterPath="$PROJECT_DIR$/build.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/loadbalancer.jar" beforeDir="false" afterPath="$PROJECT_DIR$/loadbalancer.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/operationserver.jar" beforeDir="false" afterPath="$PROJECT_DIR$/operationserver.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/operationserver.sh" beforeDir="false" afterPath="$PROJECT_DIR$/operationserver.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shared.jar" beforeDir="false" afterPath="$PROJECT_DIR$/shared.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/operationserver/OperationServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/operationserver/OperationServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/shared/OperationServerInterface.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/shared/OperationServerInterface.java" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -32,25 +23,29 @@
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="class" value="2" />
-          <entry key="java" value="10" />
+          <entry key="java" value="11" />
           <entry key="operations-588" value="3" />
+          <entry key="properties" value="1" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="CLASS" value="2" />
-          <entry key="JAVA" value="10" />
+          <entry key="JAVA" value="11" />
           <entry key="PLAIN_TEXT" value="3" />
+          <entry key="Properties" value="1" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="4913" />
+          <entry key="java" value="6374" />
+          <entry key="properties" value="20" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="4912" />
+          <entry key="JAVA" value="6373" />
+          <entry key="Properties" value="20" />
           <entry key="RegExp" value="1" />
         </counts>
       </usages-collector>
@@ -58,32 +53,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/operationserver/Operations.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="150">
-              <caret line="10" column="13" selection-start-line="10" selection-start-column="13" selection-end-line="10" selection-end-column="13" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="448">
-              <caret line="96" column="85" selection-start-line="96" selection-start-column="85" selection-end-line="96" selection-end-column="85" />
-              <folding>
-                <element signature="imports" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/operationserver/OperationServer.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="184" column="14" selection-start-line="184" selection-start-column="14" selection-end-line="184" selection-end-column="14" />
+            <state relative-caret-position="480">
+              <caret line="101" column="61" selection-start-line="101" selection-start-column="61" selection-end-line="101" selection-end-column="61" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -92,14 +66,33 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/service/AuthenticationService.java">
+        <entry file="file://$PROJECT_DIR$/src/shared/ApplicationProperties.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="822">
-              <caret line="77" column="47" selection-start-line="77" selection-start-column="11" selection-end-line="77" selection-end-column="47" />
+            <state relative-caret-position="495">
+              <caret line="33" column="20" selection-start-line="33" selection-start-column="20" selection-end-line="33" selection-end-column="20" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#578#579#0" expanded="true" />
-                <element signature="e#621#622#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/application.properties">
+          <provider selected="true" editor-type-id="text-editor">
+            <state>
+              <caret column="11" selection-start-column="11" selection-end-column="11" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/operationserver/OperationServer.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="478">
+              <caret line="199" column="9" lean-forward="true" selection-start-line="199" selection-start-column="9" selection-end-line="199" selection-end-column="9" />
+              <folding>
+                <element signature="imports" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -168,9 +161,11 @@
         <option value="$PROJECT_DIR$/src/shared/OperationServerInfo.java" />
         <option value="$PROJECT_DIR$/src/shared/AuthenticationServiceInterface.java" />
         <option value="$PROJECT_DIR$/src/service/AuthenticationService.java" />
-        <option value="$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java" />
         <option value="$PROJECT_DIR$/src/shared/OperationServerSharedInfo.java" />
+        <option value="$PROJECT_DIR$/src/shared/ApplicationProperties.java" />
         <option value="$PROJECT_DIR$/src/operationserver/OperationServer.java" />
+        <option value="$PROJECT_DIR$/application.properties" />
+        <option value="$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java" />
       </list>
     </option>
   </component>
@@ -199,11 +194,6 @@
             <path>
               <item name="INF8480_TP2" type="b2602c69:ProjectViewProjectNode" />
               <item name="TP2" type="462c0819:PsiDirectoryNode" />
-              <item name="operations" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="INF8480_TP2" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TP2" type="462c0819:PsiDirectoryNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -224,12 +214,6 @@
               <item name="src" type="462c0819:PsiDirectoryNode" />
               <item name="service" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="INF8480_TP2" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TP2" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="shared" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
@@ -238,7 +222,12 @@
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1540847934097" />
+    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1540924129951" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -317,13 +306,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/operationserver/Operations.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="10" column="13" selection-start-line="10" selection-start-column="13" selection-end-line="10" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/service/ServiceInterface.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="30">
@@ -380,8 +362,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/service/AuthenticationService.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="822">
-          <caret line="77" column="47" selection-start-line="77" selection-start-column="11" selection-end-line="77" selection-end-column="47" />
+        <state relative-caret-position="540">
+          <caret line="36" column="102" lean-forward="true" selection-start-line="36" selection-start-column="102" selection-end-line="36" selection-end-column="102" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="e#578#579#0" expanded="true" />
@@ -390,20 +372,44 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java">
+    <entry file="file://$PROJECT_DIR$/src/operationserver/Operations.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="448">
-          <caret line="96" column="85" selection-start-line="96" selection-start-column="85" selection-end-line="96" selection-end-column="85" />
+        <state relative-caret-position="150">
+          <caret line="10" column="13" selection-start-line="10" selection-start-column="13" selection-end-line="10" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/shared/ApplicationProperties.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="495">
+          <caret line="33" column="20" selection-start-line="33" selection-start-column="20" selection-end-line="33" selection-end-column="20" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/application.properties">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="11" selection-start-column="11" selection-end-column="11" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/operationserver/OperationServer.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="184" column="14" selection-start-line="184" selection-start-column="14" selection-end-line="184" selection-end-column="14" />
+        <state relative-caret-position="478">
+          <caret line="199" column="9" lean-forward="true" selection-start-line="199" selection-start-column="9" selection-end-line="199" selection-end-column="9" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/loadbalancer/LoadBalancer.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="480">
+          <caret line="101" column="61" selection-start-line="101" selection-start-column="61" selection-end-line="101" selection-end-column="61" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>

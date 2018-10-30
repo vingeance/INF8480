@@ -1,9 +1,6 @@
 package loadbalancer;
 
-import shared.AuthenticationServiceInterface;
-import shared.OperationServerInterface;
-import shared.OperationServerSharedInfo;
-import shared.TaskRejectedException;
+import shared.*;
 
 import java.io.*;
 import java.rmi.NotBoundException;
@@ -14,25 +11,35 @@ import java.util.ArrayList;
 
 public class LoadBalancer {
 
-    private AuthenticationServiceInterface authenticationServiceStub = null;
+    private AuthenticationServiceInterface authenticationServiceStub;
     private ArrayList<OperationServerInterface> operationServerStubs;
     private static final String OPERATIONS_DIRECTORY = "operations";
+    private boolean secureMode;
 
     public static void main(String[] args)
     {
-        if(args.length != 1)
+        if(args.length == 0)
         {
             System.err.println("Error: You need to specify the operations filename " +
                     "to execute this program.");
             return;
         }
 
-        LoadBalancer loadBalancer = new LoadBalancer();
+        String secureValue = ApplicationProperties.getPropertyValueFromKey("secure");
+        if(secureValue == null)
+        {
+            System.err.println("Error: Could not read secure property value in application.properties.");
+            return;
+        }
+
+        LoadBalancer loadBalancer = new LoadBalancer(Boolean.parseBoolean(secureValue));
         loadBalancer.run(args[0]);
     }
 
-    private LoadBalancer()
+    private LoadBalancer(boolean secureMode)
     {
+        this.secureMode = secureMode;
+
         if (System.getSecurityManager() == null)
         {
             System.setSecurityManager(new SecurityManager());
@@ -92,6 +99,8 @@ public class LoadBalancer {
     private void run(String operationsFilename)
     {
         ArrayList<String> operationsList = readOperationsFile(operationsFilename);
+        int nbAvailableServers = operationServerStubs.size();
+
         try
         {
             int result = operationServerStubs.get(0).calculateResult(operationsList);

@@ -1,9 +1,6 @@
 package operationserver;
 
-import shared.AuthenticationServiceInterface;
-import shared.OperationServerInterface;
-import shared.OperationServerSharedInfo;
-import shared.TaskRejectedException;
+import shared.*;
 
 import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
@@ -21,7 +18,7 @@ public class OperationServer implements OperationServerInterface {
     private int capacity; // nb operations pour lequel la tache est garantie
     private int maliciousResultRate; // 0: toujours de bons resultats, 100: toujours de faux resultats
 
-    private static AuthenticationServiceInterface authenticationServiceStub = null;
+    private static AuthenticationServiceInterface authenticationServiceStub;
     private static OperationServerSharedInfo operationServerSharedInfo;
 
     public static void main(String[] args)
@@ -54,6 +51,22 @@ public class OperationServer implements OperationServerInterface {
         {
             System.err.println("Error: Malicious result rate has to be between 0 and 100.");
             return;
+        }
+
+        String secureValue = ApplicationProperties.getPropertyValueFromKey("secure");
+        if(secureValue == null)
+        {
+            System.err.println("Error: Could not read secure property value in application.properties.");
+            return;
+        }
+        else
+        {
+            boolean secureMode = Boolean.parseBoolean(secureValue);
+            if(secureMode == true)
+            {
+                System.out.println("Secure mode enabled. Forcing malicious result rate to 0%.");
+                maliciousResultRate = 0;
+            }
         }
 
         OperationServer operationServer = new OperationServer(args[0], capacity, maliciousResultRate);
@@ -194,12 +207,13 @@ public class OperationServer implements OperationServerInterface {
     @Override
     public int calculateResult(ArrayList<String> operationsList) throws RemoteException, TaskRejectedException
     {
-
         // Make sure the server has enough resources to handle the task
         if(acceptTask(operationsList.size()) == false)
         {
             throw new TaskRejectedException();
         }
+
+        boolean malicious = (Math.random() * 100) < this.maliciousResultRate;
 
         int operationResult = 0;
         for(String operation : operationsList)
@@ -218,6 +232,11 @@ public class OperationServer implements OperationServerInterface {
             }
         }
 
+        if(malicious)
+        {
+            System.out.println("Returning malicious result.");
+            return (operationResult + (int)(6 * Math.random() + 1));
+        }
         return operationResult;
     }
 }
