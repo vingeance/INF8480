@@ -8,11 +8,17 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class LoadBalancer {
 
     private AuthenticationServiceInterface authenticationServiceStub;
     private ArrayList<OperationServerInterface> operationServerStubs;
+    private ArrayList<OperationServerSharedInfo> operationServersInfos;
     private static final String OPERATIONS_DIRECTORY = "operations";
     private boolean secureMode;
 
@@ -45,7 +51,13 @@ public class LoadBalancer {
             System.setSecurityManager(new SecurityManager());
         }
 
-        authenticationServiceStub = loadAuthenticationServiceStub("127.0.0.1");
+        String authenticationServiceIp = ApplicationProperties.getPropertyValueFromKey("serviceIp");
+        authenticationServiceStub = loadAuthenticationServiceStub(authenticationServiceIp);
+        try {
+            operationServersInfos = authenticationServiceStub.getAvailableServersInfo();
+        } catch (RemoteException e) {
+            System.out.println("Error : " + e.getMessage());
+        }
         operationServerStubs = loadOperationServerStubs();
     }
 
@@ -55,7 +67,7 @@ public class LoadBalancer {
 
         try
         {
-            Registry registry = LocateRegistry.getRegistry(hostname);
+            Registry registry = LocateRegistry.getRegistry(hostname, 5021);
             stub = (AuthenticationServiceInterface) registry.lookup("authenticationservice");
         }
         catch (NotBoundException e)
@@ -76,11 +88,24 @@ public class LoadBalancer {
         ArrayList<OperationServerInterface> stubList = new ArrayList<>();
         try
         {
-            for(OperationServerSharedInfo serverInfo : authenticationServiceStub.getAvailableServersInfo())
+            for(OperationServerSharedInfo serverInfo : operationServersInfos)
             {
-                Registry registry = LocateRegistry.getRegistry(serverInfo.getIpAddress());
-                OperationServerInterface stub = (OperationServerInterface) registry.lookup(serverInfo.getIpAddress());
+                Registry registry = LocateRegistry.getRegistry(serverInfo.getIpAddress(), 5021);
+                System.out.println(serverInfo.getIpAddress());
+                //System.out.println(Arrays.toString(registry.list()));
+                OperationServerInterface stub = null;
+                stub = (OperationServerInterface) registry.lookup(serverInfo.getIpAddress());
+
+                //System.out.println(stub);
                 stubList.add(stub);
+                ArrayList<String> test = new ArrayList<>();
+                test.add("prime 8673");
+                try {
+                    stub.calculateResult(test);
+                } catch (TaskRejectedException e) {
+                    e.printStackTrace();
+                }
+
             }
         }
         catch (NotBoundException e)
@@ -93,6 +118,16 @@ public class LoadBalancer {
             System.err.println("Error: " + e.getMessage());
         }
 
+        /*try {
+            ArrayList<String> test = new ArrayList<>();
+            test.add("prime 8673");
+            stubList.get(1).calculateResult(test);
+        } catch (RemoteException e) {
+            System.err.println("Error: " + e.getMessage());
+        } catch (TaskRejectedException e) {
+            e.printStackTrace();
+        }*/
+
         return stubList;
     }
 
@@ -100,16 +135,97 @@ public class LoadBalancer {
     {
         ArrayList<String> operationsList = readOperationsFile(operationsFilename);
         int nbAvailableServers = operationServerStubs.size();
+        final int[] totalResult = {0};
 
-        try
+        Thread[] threads = new Thread[nbAvailableServers];
+        int[] activeServersCapacities = new int[nbAvailableServers];
+        while(operationsList.size() > 0)
         {
-            int result = operationServerStubs.get(0).calculateResult(operationsList);
-            System.out.println("The result is : " + result + ".");
+            for (int i = 0; i < threads.length; i++)
+            {
+                if (threads[i] == null || !threads[i].isAlive())
+                {
+                    activeServersCapacities[i] = operationServersInfos.get(i).getCapacity();
+                    System.out.println("Thread " + i + " is dead. Capacity of the server : " + activeServersCapacities[i]);
+                }
+            }
+
+            Integer threadNumber = getServerWithBiggestCapacity(activeServersCapacities);
+            //System.out.println("Server with biggest capacity is number " + threadNumber);
+            activeServersCapacities = new int[nbAvailableServers];
+            if(threadNumber == null)
+            {
+                continue;
+            }
+
+            int serverCapacity = operationServersInfos.get(threadNumber).getCapacity();
+
+            List<String> task = operationsList;
+            if(2*serverCapacity <= operationsList.size())
+            {
+                task = operationsList.subList(0, 2 * serverCapacity);
+            }
+
+            List<String> finalTask = new ArrayList<>();
+            finalTask.addAll(task);
+
+            operationsList.subList(0, task.size()).clear();
+
+            threads[threadNumber] = new Thread(new Runnable() {
+                public void run() {
+                    try
+                    {
+                        int result = operationServerStubs.get(threadNumber).calculateResult((ArrayList<String>) finalTask);
+                        System.out.println("The result is : " + result + ".");
+                        totalResult[0] += result;
+                    }
+                    catch (RemoteException | TaskRejectedException e)
+                    {
+                        operationsList.addAll(finalTask);
+                        System.err.println("Error: " + e.getMessage());
+                    }
+                }
+            });
+            threads[threadNumber].start();
         }
-        catch (RemoteException | TaskRejectedException e)
+
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println("Final result : " + totalResult[0] + ".");
+
+        /*ArrayList<String> operationsList2 = readOperationsFile(operationsFilename);
+        try {
+            int result = operationServerStubs.get(0).calculateResult(operationsList2);
+            System.out.println("Expected result : " + result + ".");
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (TaskRejectedException e) {
+            e.printStackTrace();
+        }*/
+    }
+
+    public Integer getServerWithBiggestCapacity(int[] serverCapacities)
+    {
+        Integer biggestCapacity = 0;
+        boolean found = false;
+        for(int i = 0; i < serverCapacities.length; i++)
         {
-            System.err.println("Error: " + e.getMessage());
+            if(serverCapacities[i] > biggestCapacity)
+            {
+                biggestCapacity = i;
+                found = true;
+            }
         }
+        if (found)
+            return biggestCapacity;
+        else
+            return null;
     }
 
     private ArrayList<String> readOperationsFile(String operationsFilename)

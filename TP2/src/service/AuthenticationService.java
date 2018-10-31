@@ -1,5 +1,6 @@
 package service;
 
+import shared.ApplicationProperties;
 import shared.AuthenticationServiceInterface;
 import shared.OperationServerSharedInfo;
 
@@ -35,9 +36,9 @@ public class AuthenticationService implements AuthenticationServiceInterface {
         try
         {
             AuthenticationServiceInterface stub = (AuthenticationServiceInterface) UnicastRemoteObject
-                    .exportObject(this, 0);
+                    .exportObject(this, 5001);
 
-            Registry registry = LocateRegistry.getRegistry();
+            Registry registry = LocateRegistry.getRegistry("127.0.0.1", 5021);
             registry.rebind("authenticationservice", stub);
             System.out.println("AuthenticationService ready.");
         }

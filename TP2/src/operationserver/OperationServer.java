@@ -3,6 +3,7 @@ package operationserver;
 import shared.*;
 
 import java.rmi.ConnectException;
+import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -119,7 +120,8 @@ public class OperationServer implements OperationServerInterface {
         }
 
         // Register server in the authentication service
-        authenticationServiceStub = loadAuthenticationServiceStub("127.0.0.1");
+        String authenticationServiceIp = ApplicationProperties.getPropertyValueFromKey("serviceIp");
+        authenticationServiceStub = loadAuthenticationServiceStub(authenticationServiceIp);
         try
         {
             authenticationServiceStub.registerOperationServer(operationServerSharedInfo);
@@ -142,10 +144,13 @@ public class OperationServer implements OperationServerInterface {
         try
         {
             OperationServerInterface stub = (OperationServerInterface) UnicastRemoteObject
-                    .exportObject(this, 0);
+                    .exportObject(this, 5043);
 
-            Registry registry = LocateRegistry.getRegistry();
+            Registry registry = LocateRegistry.getRegistry(this.ipAddress, 5021);
             registry.rebind(this.ipAddress, stub);
+
+            /*Registry registry = LocateRegistry.getRegistry("127.0.0.1", 5021);
+            registry.rebind("operationserver", stub);*/
 
             System.out.println("OperationServer ready.");
         }
@@ -168,7 +173,7 @@ public class OperationServer implements OperationServerInterface {
 
         try
         {
-            Registry registry = LocateRegistry.getRegistry(hostname);
+            Registry registry = LocateRegistry.getRegistry(hostname, 5021);
             stub = (AuthenticationServiceInterface) registry.lookup("authenticationservice");
         }
         catch (NotBoundException e)
