@@ -70,6 +70,7 @@ public class OperationServer implements OperationServerInterface {
             }
         }
 
+        System.setProperty("java.rmi.server.hostname",args[0]);
         OperationServer operationServer = new OperationServer(args[0], capacity, maliciousResultRate);
 
         // If the server crashes or exits
@@ -144,7 +145,7 @@ public class OperationServer implements OperationServerInterface {
         try
         {
             OperationServerInterface stub = (OperationServerInterface) UnicastRemoteObject
-                    .exportObject(this, 5043);
+                    .exportObject(this, 5014);
 
             Registry registry = LocateRegistry.getRegistry(this.ipAddress, 5021);
             registry.rebind(this.ipAddress, stub);
