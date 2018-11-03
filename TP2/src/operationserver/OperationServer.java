@@ -3,7 +3,6 @@ package operationserver;
 import shared.*;
 
 import java.rmi.ConnectException;
-import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -16,6 +15,7 @@ import java.util.regex.Pattern;
 public class OperationServer implements OperationServerInterface {
 
     private String ipAddress;
+    private String port;
     private int capacity; // nb operations pour lequel la tache est garantie
     private int maliciousResultRate; // 0: toujours de bons resultats, 100: toujours de faux resultats
 
@@ -25,7 +25,7 @@ public class OperationServer implements OperationServerInterface {
     public static void main(String[] args)
     {
         // Make sure two required params are passed
-        if(args.length != 3)
+        if(args.length != 4)
         {
             System.err.println("Error: Not enough params to run this program.");
             return;
@@ -39,15 +39,14 @@ public class OperationServer implements OperationServerInterface {
 
         // Check that both capacity and malicious result rate are integers
         String numberRegex = "^\\d+$";
-        if (!args[1].matches(numberRegex) || !args[2].matches(numberRegex))
+        if (!args[2].matches(numberRegex) || !args[3].matches(numberRegex))
         {
-            System.err.println("Error: Both capacity and malicious result rate have to " +
-                    "be positive integers.");
+            System.err.println("Error: Expected int values for capacity and malicious params");
             return;
         }
 
-        int capacity = Integer.parseInt(args[1]);
-        int maliciousResultRate = Integer.parseInt(args[2]);
+        int capacity = Integer.parseInt(args[2]);
+        int maliciousResultRate = Integer.parseInt(args[3]);
         if(maliciousResultRate > 100)
         {
             System.err.println("Error: Malicious result rate has to be between 0 and 100.");
@@ -71,7 +70,7 @@ public class OperationServer implements OperationServerInterface {
         }
 
         System.setProperty("java.rmi.server.hostname",args[0]);
-        OperationServer operationServer = new OperationServer(args[0], capacity, maliciousResultRate);
+        OperationServer operationServer = new OperationServer(args[0], args[1], capacity, maliciousResultRate);
 
         // If the server crashes or exits
         Runtime.getRuntime().addShutdownHook(new ShutDownTask());
@@ -108,12 +107,13 @@ public class OperationServer implements OperationServerInterface {
         return m.find();
     }
 
-    public OperationServer(String ipAddress, int capacity, int maliciousResultRate)
+    public OperationServer(String ipAddress, String port, int capacity, int maliciousResultRate)
     {
         this.ipAddress = ipAddress;
+        this.port = port;
         this.capacity = capacity;
         this.maliciousResultRate = maliciousResultRate;
-        operationServerSharedInfo = new OperationServerSharedInfo(this.ipAddress, this.capacity);
+        operationServerSharedInfo = new OperationServerSharedInfo(this.ipAddress, this.port, this.capacity);
 
         if (System.getSecurityManager() == null)
         {
@@ -145,13 +145,11 @@ public class OperationServer implements OperationServerInterface {
         try
         {
             OperationServerInterface stub = (OperationServerInterface) UnicastRemoteObject
-                    .exportObject(this, 5014);
+                    .exportObject(this, Integer.parseInt(this.port));
 
-            Registry registry = LocateRegistry.getRegistry(this.ipAddress, 5021);
-            registry.rebind(this.ipAddress, stub);
-
-            /*Registry registry = LocateRegistry.getRegistry("127.0.0.1", 5021);
-            registry.rebind("operationserver", stub);*/
+            int rmiPort = Integer.parseInt(ApplicationProperties.getPropertyValueFromKey("rmiPort"));
+            Registry registry = LocateRegistry.getRegistry(this.ipAddress, rmiPort);
+            registry.rebind(this.ipAddress + ":" + this.port, stub);
 
             System.out.println("OperationServer ready.");
         }
@@ -174,7 +172,8 @@ public class OperationServer implements OperationServerInterface {
 
         try
         {
-            Registry registry = LocateRegistry.getRegistry(hostname, 5021);
+            int rmiPort = Integer.parseInt(ApplicationProperties.getPropertyValueFromKey("rmiPort"));
+            Registry registry = LocateRegistry.getRegistry(hostname, rmiPort);
             stub = (AuthenticationServiceInterface) registry.lookup("authenticationservice");
         }
         catch (NotBoundException e)

@@ -8,9 +8,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static shared.ApplicationProperties.getPropertyValueFromKey;
 
 public class LoadBalancer {
 
@@ -18,12 +18,8 @@ public class LoadBalancer {
     private AuthenticationServiceInterface authenticationServiceStub;
     private ArrayList<OperationServerInterface> operationServerStubs;
     private ArrayList<OperationServerSharedInfo> operationServersInfos;
-    //private List<Pair<List<String>,Integer>> secureModePairList;
-    private Map<Map<List<String>,Integer>,Integer> secureModeMap;
     private static final String OPERATIONS_DIRECTORY = "operations";
-    private boolean secureMode;
-
-
+    public static AtomicInteger totalResult = new AtomicInteger(0);
 
     public static void main(String[] args)
     {
@@ -34,31 +30,34 @@ public class LoadBalancer {
             return;
         }
 
-        String secureValue = ApplicationProperties.getPropertyValueFromKey("secure");
+        String secureValue = getPropertyValueFromKey("secure");
         if(secureValue == null)
         {
             System.err.println("Error: Could not read secure property value in application.properties.");
             return;
         }
 
-
-
-        LoadBalancer loadBalancer = new LoadBalancer(Boolean.parseBoolean(secureValue));
-        loadBalancer.run(args[0]);
+        LoadBalancer loadBalancer = new LoadBalancer();
+        if(Boolean.parseBoolean(secureValue))
+        {
+            // Mode securise
+            loadBalancer.runSecurely(args[0]);
+        }
+        else
+        {
+            // Mode non-securise
+            loadBalancer.runInsecurely(args[0]);
+        }
     }
 
-    private LoadBalancer(boolean secureMode)
+    private LoadBalancer()
     {
-        this.secureMode = secureMode;
-
-        secureModeMap = new HashMap<>();
-
         if (System.getSecurityManager() == null)
         {
             System.setSecurityManager(new SecurityManager());
         }
 
-        String authenticationServiceIp = ApplicationProperties.getPropertyValueFromKey("serviceIp");
+        String authenticationServiceIp = getPropertyValueFromKey("serviceIp");
         authenticationServiceStub = loadAuthenticationServiceStub(authenticationServiceIp);
         try {
             operationServersInfos = authenticationServiceStub.getAvailableServersInfo();
@@ -66,6 +65,11 @@ public class LoadBalancer {
             System.out.println("Error : " + e.getMessage());
         }
         operationServerStubs = loadOperationServerStubs();
+        if(operationServerStubs.isEmpty())
+        {
+            System.out.println("Error: no server available to calculate.");
+            System.exit(0);
+        }
     }
 
     private AuthenticationServiceInterface loadAuthenticationServiceStub(String hostname)
@@ -74,7 +78,8 @@ public class LoadBalancer {
 
         try
         {
-            Registry registry = LocateRegistry.getRegistry(hostname, 5021);
+            int rmiPort = Integer.parseInt(ApplicationProperties.getPropertyValueFromKey("rmiPort"));
+            Registry registry = LocateRegistry.getRegistry(hostname, rmiPort);
             stub = (AuthenticationServiceInterface) registry.lookup("authenticationservice");
         }
         catch (NotBoundException e)
@@ -95,14 +100,14 @@ public class LoadBalancer {
         ArrayList<OperationServerInterface> stubList = new ArrayList<>();
         try
         {
+            int rmiPort = Integer.parseInt(ApplicationProperties.getPropertyValueFromKey("rmiPort"));
             for(OperationServerSharedInfo serverInfo : operationServersInfos)
             {
-                Registry registry = LocateRegistry.getRegistry(serverInfo.getIpAddress(), 5021);
+                Registry registry = LocateRegistry.getRegistry(serverInfo.getIpAddress(), rmiPort);
                 OperationServerInterface stub = null;
-                stub = (OperationServerInterface) registry.lookup(serverInfo.getIpAddress());
+                stub = (OperationServerInterface) registry.lookup(serverInfo.getIpAddress() + ":" + serverInfo.getPort());
 
                 stubList.add(stub);
-
             }
         }
         catch (NotBoundException e)
@@ -118,168 +123,107 @@ public class LoadBalancer {
         return stubList;
     }
 
-    private void run(String operationsFilename)
+    private void runInsecurely(String operationsFilename)
+    {
+
+
+    }
+
+    private void runSecurely(String operationsFilename)
     {
         ArrayList<String> operationsList = readOperationsFile(operationsFilename);
         int nbAvailableServers = operationServerStubs.size();
-        final int[] totalResult = {0};
 
         Thread[] threads = new Thread[nbAvailableServers];
         int[] activeServersCapacities = new int[nbAvailableServers];
-        final boolean[] caught = {false};
 
-        while(caught[0] || !operationsList.isEmpty())
+        long start = System.nanoTime();
+        boolean aThreadIsAlive = true;
+        while(!operationsList.isEmpty() || (checkIfThreadAlive(threads)))
         {
             for (int i = 0; i < threads.length; i++)
             {
                 if (threads[i] == null || !threads[i].isAlive())
                 {
                     activeServersCapacities[i] = operationServersInfos.get(i).getCapacity();
+                    //System.out.println("Thread " + i + " is dead. Capacity of the server : " + activeServersCapacities[i]);
                 }
             }
 
             Integer threadNumber = getServerWithBiggestCapacity(activeServersCapacities);
-            //System.out.println("Server with biggest capacity is number " + threadNumber);
             activeServersCapacities = new int[nbAvailableServers];
-            if(threadNumber == null)
+
+            if(threadNumber == null || operationsList.isEmpty())
             {
+                // No thread available
                 continue;
             }
-
             int serverCapacity = operationServersInfos.get(threadNumber).getCapacity();
 
-            List<String> task = operationsList;
+            //System.out.println("Operation list size: " + operationsList.size());
+            ArrayList<String> task = operationsList;
             if(2*serverCapacity <= operationsList.size())
             {
-                task = operationsList.subList(0, 2 * serverCapacity);
+                task = new ArrayList<String>(operationsList.subList(0, 2 * serverCapacity));
+                //System.out.println("Created subtask of size: " + task.size());
             }
-            System.out.println("Task" + " size: " + task.size() + ".");
-            List<String> finalTask = new ArrayList<>();
-            finalTask.addAll(task);
 
+            final ArrayList<String> threadTask = new ArrayList<>(task);
+            //System.out.println("Thread task size: " + threadTask.size());
+
+            // Remove operations from 0 to task size
             operationsList.subList(0, task.size()).clear();
-
-            threads[threadNumber] = new Thread(() -> {
+            threads[threadNumber] = new Thread(() ->
+            {
                 try
                 {
-                    int result = operationServerStubs.get(threadNumber).calculateResult((ArrayList<String>) finalTask);
-                    System.out.println("The result" + " is : " + result + ".");
-                    if(!secureMode)
-                        totalResult[0] += result;
-                    else
-                    {
-                        Map<List<String>,Integer> tmp = new HashMap<>();
-                        tmp.put(finalTask,threadNumber);
-                        secureModeMap.put(tmp,result); // (ajouter la tâche + le thread) avec le résultat
-                    }
-                    caught[0] = false;
+                    int result = operationServerStubs.get(threadNumber).calculateResult(threadTask);
+                    //System.out.println("Task size: " + threadTask.size());
+                    //System.out.println("The result is : " + result + ".");
+                    totalResult.getAndAdd(result);
                 }
                 catch (RemoteException | TaskRejectedException e)
                 {
-                    caught[0] = true;
-                    operationsList.addAll(finalTask);
-                    System.err.println("Error " + " : " + e.getMessage());
+                    operationsList.addAll(threadTask);
+                    //System.err.println("Error: " + e.getMessage());
                 }
             });
             threads[threadNumber].start();
         }
-        for (Thread thread : threads) {
-            try {
+
+        // Wait for threads to terminate
+        for (Thread thread : threads)
+        {
+            try
+            {
                 thread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
-        }
-        if(!secureMode)
-        {
-            threads = new Thread[nbAvailableServers];
-            activeServersCapacities = new int[nbAvailableServers];
-            while(caught[0] || !secureModeMap.isEmpty())
+            catch (InterruptedException e)
             {
-                List<String> task = operationsList;
-                for (int i = 0; i < threads.length; i++)
-                {
-                    if (threads[i] == null || !threads[i].isAlive())
-                    {
-                        int serverCapacity = operationServersInfos.get(i).getCapacity();
-
-
-                        if(2*serverCapacity <= operationsList.size())
-                        {
-                            task = operationsList.subList(0, 2 * serverCapacity);
-                        }
-                        if(!secureModeMap.get(task).equals(i))
-                            activeServersCapacities[i] = operationServersInfos.get(i).getCapacity();
-                    }
-                }
-
-                Integer threadNumber = getServerWithBiggestCapacity(activeServersCapacities);
-
-                activeServersCapacities = new int[nbAvailableServers];
-                if(threadNumber == null)
-                {
-                    continue;
-                }
-
-                List<String> finalTask = new ArrayList<>();
-                finalTask.addAll(task);
-
-                operationsList.subList(0, task.size()).clear();
-
-                threads[threadNumber] = new Thread(() -> {
-                    try
-                    {
-                        int result = operationServerStubs.get(threadNumber).calculateResult((ArrayList<String>) finalTask);
-                        System.out.println("The result" + " is : " + result + ".");
-                        //if(secureModeMap.)
-                        caught[0] = false;
-                    }
-                    catch (RemoteException | TaskRejectedException e)
-                    {
-                        caught[0] = true;
-                        operationsList.addAll(finalTask);
-                        System.err.println("Error " + " : " + e.getMessage());
-                    }
-                });
-                threads[threadNumber].start();
-            }
-            for (Thread thread : threads) {
-                try {
-                    thread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                System.err.println("Error: " + e.getMessage());
             }
         }
 
-        System.out.println("Final result : " + totalResult[0] + ".");
-
-        /*ArrayList<String> operationsList2 = readOperationsFile(operationsFilename);
-        try {
-            int result = operationServerStubs.get(0).calculateResult(operationsList2);
-            System.out.println("Expected result : " + result + ".");
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (TaskRejectedException e) {
-            e.printStackTrace();
-        }*/
+        long end = System.nanoTime();
+        System.out.println("Temps pour " + nbAvailableServers + " serveurs : " + (end - start) / 1E9 + " s");
+        System.out.println("Final result : " + totalResult.get() + ".");
     }
 
-    public ArrayList<String> removeFromHead(ArrayList<String> list, int end)
+    private boolean checkIfThreadAlive(Thread[] threads)
     {
-        int i = 0;
-        for(String element: list)
+        boolean aThreadIsAlive = false;
+        for (Thread thread : threads)
         {
-            if ( i < end)
+            if (thread != null && thread.isAlive())
             {
-                list.remove(element);
+                aThreadIsAlive = true;
+                break;
             }
         }
-        return list;
+        return aThreadIsAlive;
     }
 
-
-    public Integer getServerWithBiggestCapacity(int[] serverCapacities)
+    private Integer getServerWithBiggestCapacity(int[] serverCapacities)
     {
         Integer biggestCapacity = 0;
         boolean found = false;
@@ -292,9 +236,13 @@ public class LoadBalancer {
             }
         }
         if (found)
+        {
             return biggestCapacity;
+        }
         else
+        {
             return null;
+        }
     }
 
     private ArrayList<String> readOperationsFile(String operationsFilename)
@@ -319,30 +267,4 @@ public class LoadBalancer {
         return allOperations;
     }
 
-}
-
-class Pair<F, S> {
-    private F first; //first member of pair
-    private S second; //second member of pair
-
-    public Pair(F first, S second) {
-        this.first = first;
-        this.second = second;
-    }
-
-    public void setFirst(F first) {
-        this.first = first;
-    }
-
-    public void setSecond(S second) {
-        this.second = second;
-    }
-
-    public F getFirst() {
-        return first;
-    }
-
-    public S getSecond() {
-        return second;
-    }
 }

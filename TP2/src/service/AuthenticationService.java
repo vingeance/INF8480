@@ -17,6 +17,8 @@ public class AuthenticationService implements AuthenticationServiceInterface {
 
     public static void main(String[] args)
     {
+        String serviceIp = ApplicationProperties.getPropertyValueFromKey("serviceIp");
+        System.setProperty("java.rmi.server.hostname", serviceIp);
         AuthenticationService service = new AuthenticationService();
         service.run();
     }
@@ -35,10 +37,13 @@ public class AuthenticationService implements AuthenticationServiceInterface {
 
         try
         {
+            int servicePort = Integer.parseInt(ApplicationProperties.getPropertyValueFromKey("servicePort"));
             AuthenticationServiceInterface stub = (AuthenticationServiceInterface) UnicastRemoteObject
-                    .exportObject(this, 5001);
+                    .exportObject(this, servicePort);
 
-            Registry registry = LocateRegistry.getRegistry("127.0.0.1", 5021);
+            String serviceIp = System.getProperty("java.rmi.server.hostname");
+            int rmiPort = Integer.parseInt(ApplicationProperties.getPropertyValueFromKey("rmiPort"));
+            Registry registry = LocateRegistry.getRegistry(serviceIp, rmiPort);
             registry.rebind("authenticationservice", stub);
             System.out.println("AuthenticationService ready.");
         }
@@ -68,9 +73,12 @@ public class AuthenticationService implements AuthenticationServiceInterface {
         {
             if(serverInfo.getIpAddress().equals(operationServerInfo.getIpAddress()))
             {
-                availableServersInfo.remove(serverInfo);
-                System.out.println("Removed server with IP " + serverInfo.getIpAddress() + " from the list.");
-                break;
+                if(serverInfo.getPort().equals(operationServerInfo.getPort()))
+                {
+                    availableServersInfo.remove(serverInfo);
+                    System.out.println("Removed server with IP " + serverInfo.getIpAddress() + " and port " + serverInfo.getPort() + " from the list.");
+                    break;
+                }
             }
         }
     }
