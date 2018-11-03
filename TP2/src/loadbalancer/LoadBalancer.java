@@ -125,8 +125,102 @@ public class LoadBalancer {
 
     private void runInsecurely(String operationsFilename)
     {
+        //List<OperationTaskResult> opTasksResult = Collections.synchronizedList(new ArrayList<>());
+        ArrayList<String> operationsList = readOperationsFile(operationsFilename);
+        int nbAvailableServers = operationServerStubs.size();
 
+        Thread[] threads = new Thread[nbAvailableServers];
+        int fixedTaskSize = 2 * getMinimumCapacity(this.operationServersInfos);
 
+        long start = System.nanoTime();
+        while(!operationsList.isEmpty() || (isAnyThreadAlive(threads)))
+        {
+            int threadA = -1;
+            int threadB = -1;
+            for (int i = 0; i < threads.length; i++)
+            {
+                if (threads[i] == null || !threads[i].isAlive())
+                {
+                    if(threadA == -1)
+                    {
+                        threadA = i;
+                    }
+                    else if(threadB == -1)
+                    {
+                        threadB = i;
+                    }
+                }
+            }
+
+            if(threadA == -1 || threadB == -1 || operationsList.isEmpty())
+            {
+                // Not enough threads available
+                continue;
+            }
+
+            //System.out.println("Operation list size: " + operationsList.size());
+            ArrayList<String> task = operationsList;
+            if(fixedTaskSize <= operationsList.size())
+            {
+                // Create a subtask
+                task = new ArrayList<>(operationsList.subList(0, fixedTaskSize));
+            }
+
+            final ArrayList<String> threadTask = new ArrayList<>(task);
+            //System.out.println("Thread task size: " + threadTask.size());
+            // Remove operations from 0 to task size
+            operationsList.subList(0, task.size()).clear();
+
+            final OperationServerInterface taskServerStubA = operationServerStubs.get(threadA);
+            final OperationServerInterface taskServerStubB = operationServerStubs.get(threadB);
+            threads[threadA] = new Thread(() ->
+            {
+                try
+                {
+                    int resultA = taskServerStubA.calculateResult(threadTask);
+                    int resultB = taskServerStubB.calculateResult(threadTask);
+                    /*OperationTaskResult operationTaskResult = new OperationTaskResult(threadTask, resultA);
+                    opTasksResult.add(operationTaskResult);*/
+
+                    //System.out.println("The result is : " + result + ".");
+                    if(resultA == resultB)
+                    {
+                        totalResult.getAndAdd(resultA);
+                    }
+                    else
+                    {
+                        System.out.println("FALSE RESULT DETECTED. [ A : " + resultA + ", B : " + resultB + " ]");
+                        operationsList.addAll(threadTask);
+                    }
+                }
+                catch (RemoteException | TaskRejectedException e)
+                {
+                    operationsList.addAll(threadTask);
+                    //System.err.println("Error: " + e.getMessage());
+                }
+            });
+            threads[threadA].start();
+        }
+
+        // Wait for threads to terminate
+        for (Thread thread : threads)
+        {
+            try
+            {
+                if(thread != null)
+                {
+                    thread.join();
+                }
+            }
+            catch (InterruptedException e)
+            {
+                System.err.println("Error: " + e.getMessage());
+            }
+        }
+
+        long end = System.nanoTime();
+        System.out.println("Temps pour " + nbAvailableServers + " serveurs : " + (end - start) / 1E9 + " s");
+        System.out.println("Resultat final : " + totalResult.get() + ".");
     }
 
     private void runSecurely(String operationsFilename)
@@ -138,8 +232,7 @@ public class LoadBalancer {
         int[] activeServersCapacities = new int[nbAvailableServers];
 
         long start = System.nanoTime();
-        boolean aThreadIsAlive = true;
-        while(!operationsList.isEmpty() || (checkIfThreadAlive(threads)))
+        while(!operationsList.isEmpty() || (isAnyThreadAlive(threads)))
         {
             for (int i = 0; i < threads.length; i++)
             {
@@ -196,7 +289,10 @@ public class LoadBalancer {
         {
             try
             {
-                thread.join();
+                if(thread != null)
+                {
+                    thread.join();
+                }
             }
             catch (InterruptedException e)
             {
@@ -206,10 +302,10 @@ public class LoadBalancer {
 
         long end = System.nanoTime();
         System.out.println("Temps pour " + nbAvailableServers + " serveurs : " + (end - start) / 1E9 + " s");
-        System.out.println("Final result : " + totalResult.get() + ".");
+        System.out.println("Resultat final : " + totalResult.get() + ".");
     }
 
-    private boolean checkIfThreadAlive(Thread[] threads)
+    private boolean isAnyThreadAlive(Thread[] threads)
     {
         boolean aThreadIsAlive = false;
         for (Thread thread : threads)
@@ -243,6 +339,19 @@ public class LoadBalancer {
         {
             return null;
         }
+    }
+
+    private int getMinimumCapacity(ArrayList<OperationServerSharedInfo> serversInfoList)
+    {
+        int minCapacity = serversInfoList.get(0).getCapacity();
+        for(int i = 1; i < serversInfoList.size(); i++)
+        {
+            if(serversInfoList.get(i).getCapacity() < minCapacity)
+            {
+                minCapacity = serversInfoList.get(i).getCapacity();
+            }
+        }
+        return minCapacity;
     }
 
     private ArrayList<String> readOperationsFile(String operationsFilename)
