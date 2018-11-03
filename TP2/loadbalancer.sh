@@ -6,7 +6,9 @@ popd > /dev/null
 
 cat << EndOfMessage
 HELP: 
-./loadbalancer.sh operations_filename
+./loadbalancer.sh username password operations_filename
+	- username: (REQUIRED) Nom d'utilisateur
+	- password: (REQUIRED) Mot de passe
 	- operations_filename: (REQUIRED) Nom du fichier d'operations.
 
 EndOfMessage

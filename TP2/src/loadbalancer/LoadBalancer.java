@@ -14,8 +14,8 @@ import static shared.ApplicationProperties.getPropertyValueFromKey;
 
 public class LoadBalancer {
 
-
-    private AuthenticationServiceInterface authenticationServiceStub;
+    private static String username;
+    private static AuthenticationServiceInterface authenticationServiceStub;
     private ArrayList<OperationServerInterface> operationServerStubs;
     private ArrayList<OperationServerSharedInfo> operationServersInfos;
     private static final String OPERATIONS_DIRECTORY = "operations";
@@ -23,10 +23,9 @@ public class LoadBalancer {
 
     public static void main(String[] args)
     {
-        if(args.length == 0)
+        if(args.length != 3)
         {
-            System.err.println("Error: You need to specify the operations filename " +
-                    "to execute this program.");
+            System.err.println("Error: Not enough parameters to execute the program.");
             return;
         }
 
@@ -37,21 +36,45 @@ public class LoadBalancer {
             return;
         }
 
-        LoadBalancer loadBalancer = new LoadBalancer();
+        LoadBalancer loadBalancer = new LoadBalancer(args[0], args[1]);
+
+        // If the loadbalancer crashes or exits
+        Runtime.getRuntime().addShutdownHook(new ShutDownTask());
+
         if(Boolean.parseBoolean(secureValue))
         {
             // Mode securise
-            loadBalancer.runSecurely(args[0]);
+            loadBalancer.runSecurely(args[2]);
         }
         else
         {
             // Mode non-securise
-            loadBalancer.runInsecurely(args[0]);
+            loadBalancer.runInsecurely(args[2]);
         }
     }
 
-    private LoadBalancer()
+    private static class ShutDownTask extends Thread
     {
+        @Override
+        public void run()
+        {
+            try
+            {
+                authenticationServiceStub.unregisterLoadBalancer(username);
+                System.out.println("Unregistered loadbalancer from authentication service.");
+            }
+            catch (RemoteException e)
+            {
+                System.err.println("Cannot unregister loadbalancer from AuthenticationService.");
+                System.err.println();
+                System.err.println("Error: " + e.getMessage());
+            }
+        }
+    }
+
+    private LoadBalancer(String username, String password)
+    {
+        this.username = username;
         if (System.getSecurityManager() == null)
         {
             System.setSecurityManager(new SecurityManager());
@@ -60,6 +83,7 @@ public class LoadBalancer {
         String authenticationServiceIp = getPropertyValueFromKey("serviceIp");
         authenticationServiceStub = loadAuthenticationServiceStub(authenticationServiceIp);
         try {
+            authenticationServiceStub.registerLoadBalancer(username, password);
             operationServersInfos = authenticationServiceStub.getAvailableServersInfo();
         } catch (RemoteException e) {
             System.out.println("Error : " + e.getMessage());
@@ -128,6 +152,12 @@ public class LoadBalancer {
         //List<OperationTaskResult> opTasksResult = Collections.synchronizedList(new ArrayList<>());
         ArrayList<String> operationsList = readOperationsFile(operationsFilename);
         int nbAvailableServers = operationServerStubs.size();
+
+        if(nbAvailableServers < 2)
+        {
+            System.err.println("Error: Non-secure mode requires at least two servers.");
+            return;
+        }
 
         Thread[] threads = new Thread[nbAvailableServers];
         int fixedTaskSize = 2 * getMinimumCapacity(this.operationServersInfos);

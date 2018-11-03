@@ -91,7 +91,7 @@ public class OperationServer implements OperationServerInterface {
             }
             catch (RemoteException e)
             {
-                System.err.println("Cannot register server in AuthenticationService.");
+                System.err.println("Cannot unregister server from AuthenticationService.");
                 System.err.println();
                 System.err.println("Error: " + e.getMessage());
             }

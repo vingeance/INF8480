@@ -10,9 +10,12 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AuthenticationService implements AuthenticationServiceInterface {
 
+    private Map<String, String> loadBalancerIdentity = new HashMap<>(); // key: username, value: password
     private ArrayList<OperationServerSharedInfo> availableServersInfo;
 
     public static void main(String[] args)
@@ -61,8 +64,23 @@ public class AuthenticationService implements AuthenticationServiceInterface {
     }
 
     @Override
+    public void registerLoadBalancer(String username, String password) throws RemoteException
+    {
+        System.out.println("Added load balancer with username " + username);
+        loadBalancerIdentity.put(username, password);
+    }
+
+    @Override
+    public void unregisterLoadBalancer(String username) throws RemoteException
+    {
+        System.out.println("Removed load balancer with username " + username);
+        loadBalancerIdentity.remove(username);
+    }
+
+    @Override
     public void registerOperationServer(OperationServerSharedInfo operationServerInfo) throws RemoteException
     {
+        System.out.println("Added server with IP " + operationServerInfo.getIpAddress() + " and port " + operationServerInfo.getPort());
         availableServersInfo.add(operationServerInfo);
     }
 
@@ -76,7 +94,7 @@ public class AuthenticationService implements AuthenticationServiceInterface {
                 if(serverInfo.getPort().equals(operationServerInfo.getPort()))
                 {
                     availableServersInfo.remove(serverInfo);
-                    System.out.println("Removed server with IP " + serverInfo.getIpAddress() + " and port " + serverInfo.getPort() + " from the list.");
+                    System.out.println("Removed server with IP " + serverInfo.getIpAddress() + " and port " + serverInfo.getPort());
                     break;
                 }
             }
@@ -92,6 +110,17 @@ public class AuthenticationService implements AuthenticationServiceInterface {
     @Override
     public boolean verifyLoadBalancerIdentity(String username, String password) throws RemoteException
     {
-        return false;
+        if(!loadBalancerIdentity.containsKey(username))
+        {
+            System.out.println("Verification failed. User does not exist.");
+            return false;
+        }
+        if(!loadBalancerIdentity.get(username).equals(password))
+        {
+            System.out.println("Verification failed. Password is incorrect.");
+            return false;
+        }
+        //System.out.println("Verification success. Credentials are valid.");
+        return true;
     }
 }
