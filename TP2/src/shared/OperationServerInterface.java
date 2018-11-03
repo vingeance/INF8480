@@ -5,5 +5,5 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 
 public interface OperationServerInterface extends Remote {
-    int calculateResult(ArrayList<String> operationsList) throws RemoteException, TaskRejectedException;
+    int calculateResult(String loadBalancerUser, String loadBalancerPassword, ArrayList<String> operationsList) throws RemoteException, TaskRejectedException, FalseIdentityException;
 }

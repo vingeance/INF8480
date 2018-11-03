@@ -15,6 +15,7 @@ import static shared.ApplicationProperties.getPropertyValueFromKey;
 public class LoadBalancer {
 
     private static String username;
+    private String password;
     private static AuthenticationServiceInterface authenticationServiceStub;
     private ArrayList<OperationServerInterface> operationServerStubs;
     private ArrayList<OperationServerSharedInfo> operationServersInfos;
@@ -74,7 +75,8 @@ public class LoadBalancer {
 
     private LoadBalancer(String username, String password)
     {
-        this.username = username;
+        LoadBalancer.username = username;
+        this.password = password;
         if (System.getSecurityManager() == null)
         {
             System.setSecurityManager(new SecurityManager());
@@ -207,8 +209,8 @@ public class LoadBalancer {
             {
                 try
                 {
-                    int resultA = taskServerStubA.calculateResult(threadTask);
-                    int resultB = taskServerStubB.calculateResult(threadTask);
+                    int resultA = taskServerStubA.calculateResult(LoadBalancer.username, this.password, threadTask);
+                    int resultB = taskServerStubB.calculateResult(LoadBalancer.username, this.password, threadTask);
                     /*OperationTaskResult operationTaskResult = new OperationTaskResult(threadTask, resultA);
                     opTasksResult.add(operationTaskResult);*/
 
@@ -227,6 +229,11 @@ public class LoadBalancer {
                 {
                     operationsList.addAll(threadTask);
                     //System.err.println("Error: " + e.getMessage());
+                }
+                catch (FalseIdentityException e)
+                {
+                    System.err.println("Error: " + e.getMessage());
+                    System.exit(0);
                 }
             });
             threads[threadA].start();
@@ -300,7 +307,7 @@ public class LoadBalancer {
             {
                 try
                 {
-                    int result = operationServerStubs.get(threadNumber).calculateResult(threadTask);
+                    int result = operationServerStubs.get(threadNumber).calculateResult(LoadBalancer.username, this.password, threadTask);
                     //System.out.println("Task size: " + threadTask.size());
                     //System.out.println("The result is : " + result + ".");
                     totalResult.getAndAdd(result);
@@ -309,6 +316,11 @@ public class LoadBalancer {
                 {
                     operationsList.addAll(threadTask);
                     //System.err.println("Error: " + e.getMessage());
+                }
+                catch (FalseIdentityException e)
+                {
+                    System.err.println("Error: " + e.getMessage());
+                    System.exit(0);
                 }
             });
             threads[threadNumber].start();

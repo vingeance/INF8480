@@ -210,8 +210,12 @@ public class OperationServer implements OperationServerInterface {
      * Méthode accessible par RMI.
      */
     @Override
-    public int calculateResult(ArrayList<String> operationsList) throws RemoteException, TaskRejectedException
-    {
+    public int calculateResult(String loadBalancerUser, String loadBalancerPassword, ArrayList<String> operationsList) throws RemoteException, TaskRejectedException, FalseIdentityException {
+        if(!authenticationServiceStub.verifyLoadBalancerIdentity(loadBalancerUser, loadBalancerPassword))
+        {
+            throw new FalseIdentityException();
+        }
+
         // Make sure the server has enough resources to handle the task
         if(acceptTask(operationsList.size()) == false)
         {
