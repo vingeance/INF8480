@@ -79,6 +79,9 @@ public class OperationServer implements OperationServerInterface {
         operationServer.run();
     }
 
+    /**
+     * Executed when OperationServer is stopped. Unregister from the service.
+     * **/
     private static class ShutDownTask extends Thread
     {
         @Override
@@ -96,15 +99,6 @@ public class OperationServer implements OperationServerInterface {
                 System.err.println("Error: " + e.getMessage());
             }
         }
-    }
-
-    private static boolean validateIP(String address)
-    {
-        String pattern = "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|" +
-                "[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"; // ip
-        Pattern r = Pattern.compile(pattern);
-        Matcher m = r.matcher(address);
-        return m.find();
     }
 
     public OperationServer(String ipAddress, String port, int capacity, int maliciousResultRate)
@@ -189,7 +183,10 @@ public class OperationServer implements OperationServerInterface {
         return stub;
     }
 
-    public boolean acceptTask(int taskSize)
+    /**
+     * Returns true if server can calculate the result of the task
+     * **/
+    private boolean acceptTask(int taskSize)
     {
         // Condition pour que la tache soit garantie
         if(taskSize <= capacity)
@@ -204,6 +201,16 @@ public class OperationServer implements OperationServerInterface {
             return taskRejectRate < randomValue;
         }
 
+    }
+
+    /** UTILITY FUNCTION **/
+    private static boolean validateIP(String address)
+    {
+        String pattern = "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|" +
+                "[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"; // ip
+        Pattern r = Pattern.compile(pattern);
+        Matcher m = r.matcher(address);
+        return m.find();
     }
 
     /*
@@ -243,7 +250,7 @@ public class OperationServer implements OperationServerInterface {
 
         if(malicious)
         {
-            System.out.println("Returning malicious result.");
+            //System.out.println("Returning malicious result.");
             return (operationResult + (int)(6 * Math.random() + 1));
         }
         return operationResult;
